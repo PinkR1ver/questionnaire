@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>神经内科眩晕科问诊预调查表</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/kjua@0.9.0/dist/kjua.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>神经内科眩晕科问诊预调查表</h1>
+        <form id="questionnaireForm">
+            <div id="questionsContainer"></div>
+            <button type="submit" class="submit-btn">提交问卷</button>
+        </form>
+        <div id="result" class="result-container" style="display: none;">
+            <h2>问诊预调查结果</h2>
+            <pre id="resultText"></pre>
+            <div class="qr-container">
+                <h3>扫描二维码获取问诊记录</h3>
+                <div id="qrcode"></div>
+                <p id="qrError" class="error-message" style="display: none;">二维码生成失败，请刷新页面重试</p>
+            </div>
+            <button type="button" class="reset-btn" onclick="resetForm()">重新填写</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

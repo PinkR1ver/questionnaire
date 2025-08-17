@@ -1,0 +1,42 @@
+{
+    "title": "神经内科眩晕科问诊预调查表",
+    "questions": [
+        {
+            "id": "basic1",
+            "type": "text",
+            "title": "姓名",
+            "required": true
+        },
+        {
+            "id": "basic2",
+            "type": "text",
+            "title": "年龄",
+            "required": true
+        },
+        {
+            "id": "basic3",
+            "type": "radio",
+            "title": "性别",
+            "options": ["男", "女"],
+            "required": true
+        },
+        {
+            "id": "symptom1",
+            "type": "radio",
+            "title": "眩晕发作持续时间",
+            "options": ["几秒钟", "几分钟", "几小时", "持续整天"],
+            "required": true
+        },
+        {
+            "id": "symptom2",
+            "type": "checkbox",
+            "title": "伴随症状（可多选）",
+            "options": [
+                "恶心呕吐",
+                "头痛",
+                "走路不稳"
+            ],
+            "required": true
+        }
+    ]
+}
