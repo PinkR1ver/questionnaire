@@ -1,128 +1,122 @@
-// 问卷数据直接嵌入到JS中，避免fetch加载
-const questionsData = {
-    "title": "神经内科眩晕科问诊预调查表",
-    "questions": [
-        {
-            "id": "basic1",
-            "type": "text",
-            "title": "姓名",
-            "required": true
-        },
-        {
-            "id": "basic2",
-            "type": "text",
-            "title": "年龄",
-            "required": true
-        },
-        {
-            "id": "basic3",
-            "type": "radio",
-            "title": "性别",
-            "options": ["男", "女"],
-            "required": true
-        },
-        {
-            "id": "symptom1",
-            "type": "radio",
-            "title": "眩晕发作持续时间",
-            "options": ["几秒钟", "几分钟", "几小时", "持续整天"],
-            "required": true
-        },
-        {
-            "id": "symptom2",
-            "type": "checkbox",
-            "title": "伴随症状（可多选）",
-            "options": [
-                "恶心呕吐",
-                "头痛",
-                "走路不稳"
-            ],
-            "required": true
-        }
-    ]
-};
-
-// 加载问卷数据
-function loadQuestions() {
+// 从questions.json加载问卷数据
+async function loadQuestions() {
     try {
-        renderQuestionnaire(questionsData);
+        const response = await fetch('questions.json');
+        if (!response.ok) {
+            throw new Error('加载问卷数据失败');
+        }
+        const data = await response.json();
+        renderQuestionnaire(data);
     } catch (error) {
         console.error('加载问卷失败:', error);
         document.getElementById('questionsContainer').innerHTML = '<p class="error">加载问卷失败，请刷新页面重试。</p>';
     }
 }
 
+// 从标题中提取显示文本（去除括号内容）
+function getDisplayTitle(title) {
+    return title.split('（')[0];
+}
+
+// 从标题中提取结果文本（获取括号内容，如果没有括号则使用完整标题）
+function getResultTitle(title) {
+    const match = title.match(/（(.+)）/);
+    return match ? match[1] : title;
+}
+
 // 渲染问卷
 function renderQuestionnaire(data) {
     const container = document.getElementById('questionsContainer');
+    container.innerHTML = ''; // 清空现有内容
     document.querySelector('h1').textContent = data.title;
 
-    data.questions.forEach(question => {
-        const questionDiv = document.createElement('div');
-        questionDiv.className = 'question-item';
-        
-        const title = document.createElement('div');
-        title.className = 'question-title';
-        title.textContent = `${question.title}${question.required ? ' *' : ''}`;
-        
-        const optionsContainer = document.createElement('div');
-        optionsContainer.className = 'options-container';
+    // 渲染每个部分
+    data.sections.forEach(section => {
+        // 创建部分标题
+        const sectionTitle = document.createElement('h2');
+        sectionTitle.className = 'section-title';
+        sectionTitle.textContent = section.title;
+        container.appendChild(sectionTitle);
 
-        switch (question.type) {
-            case 'text':
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.name = question.id;
-                input.required = question.required;
-                optionsContainer.appendChild(input);
-                break;
+        // 渲染该部分的所有问题
+        section.questions.forEach(question => {
+            const questionDiv = document.createElement('div');
+            questionDiv.className = 'question-item';
+            
+            const title = document.createElement('div');
+            title.className = 'question-title';
+            title.textContent = `${getDisplayTitle(question.title)}${question.required ? ' *' : ''}`;
+            
+            const optionsContainer = document.createElement('div');
+            optionsContainer.className = 'options-container';
 
-            case 'radio':
-                question.options.forEach(option => {
-                    const optionDiv = document.createElement('div');
-                    optionDiv.className = 'option-item';
-                    
-                    const radio = document.createElement('input');
-                    radio.type = 'radio';
-                    radio.name = question.id;
-                    radio.value = option;
-                    radio.required = question.required;
-                    
-                    const label = document.createElement('label');
-                    label.textContent = option;
-                    
-                    optionDiv.appendChild(radio);
-                    optionDiv.appendChild(label);
-                    optionsContainer.appendChild(optionDiv);
-                });
-                break;
-
-            case 'checkbox':
-                question.options.forEach(option => {
-                    const optionDiv = document.createElement('div');
-                    optionDiv.className = 'option-item';
-                    
-                    const checkbox = document.createElement('input');
-                    checkbox.type = 'checkbox';
-                    checkbox.name = question.id;
-                    checkbox.value = option;
-                    if (question.required) {
-                        checkbox.setAttribute('data-required', 'true');
+            switch (question.type) {
+                case 'text':
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.name = question.id;
+                    input.required = question.required;
+                    if (question.placeholder) {
+                        input.placeholder = question.placeholder;
                     }
-                    
-                    const label = document.createElement('label');
-                    label.textContent = option;
-                    
-                    optionDiv.appendChild(checkbox);
-                    optionDiv.appendChild(label);
-                    optionsContainer.appendChild(optionDiv);
-                });
-                break;
-        }
+                    optionsContainer.appendChild(input);
+                    break;
 
-        questionDiv.appendChild(title);
-        questionDiv.appendChild(optionsContainer);
-        container.appendChild(questionDiv);
+                case 'radio':
+                    question.options.forEach(option => {
+                        const optionDiv = document.createElement('div');
+                        optionDiv.className = 'option-item';
+                        
+                        const radio = document.createElement('input');
+                        radio.type = 'radio';
+                        radio.name = question.id;
+                        radio.value = option;
+                        radio.required = question.required;
+                        
+                        const label = document.createElement('label');
+                        label.textContent = option;
+                        
+                        optionDiv.appendChild(radio);
+                        optionDiv.appendChild(label);
+                        optionsContainer.appendChild(optionDiv);
+                    });
+                    break;
+
+                case 'checkbox':
+                    question.options.forEach(option => {
+                        const optionDiv = document.createElement('div');
+                        optionDiv.className = 'option-item';
+                        
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.name = question.id;
+                        checkbox.value = option;
+                        if (question.required) {
+                            checkbox.setAttribute('data-required', 'true');
+                        }
+                        
+                        const label = document.createElement('label');
+                        label.textContent = option;
+                        
+                        optionDiv.appendChild(checkbox);
+                        optionDiv.appendChild(label);
+                        optionsContainer.appendChild(optionDiv);
+                    });
+
+                    // 如果有注释，添加注释说明
+                    if (question.note) {
+                        const noteDiv = document.createElement('div');
+                        noteDiv.className = 'question-note';
+                        noteDiv.textContent = question.note;
+                        optionsContainer.appendChild(noteDiv);
+                    }
+                    break;
+            }
+
+            questionDiv.appendChild(title);
+            questionDiv.appendChild(optionsContainer);
+            container.appendChild(questionDiv);
+        });
     });
 }
 
@@ -143,8 +137,8 @@ function generateQRCode(text) {
             rounded: 100,       // 圆角程度
             quiet: 2,           // 边距
             mode: 'byte',       // 使用byte模式支持中文
-            minVersion: 1,      // 最小版本
-            maxVersion: 40      // 最大版本，支持更多数据
+            minVersion: 10,     // 提高最小版本以支持更多数据
+            maxVersion: 40      // 最大版本
         });
 
         // 添加生成的二维码到容器
@@ -187,18 +181,30 @@ document.getElementById('questionnaireForm').addEventListener('submit', async fu
         const formData = new FormData(this);
         let result = '';
 
-        questionsData.questions.forEach(question => {
-            result += `${question.title}：`;
-            
-            if (question.type === 'checkbox') {
-                const selectedOptions = Array.from(formData.getAll(question.id));
-                result += selectedOptions.join('、') || '未选择';
-            } else {
-                result += formData.get(question.id) || '未填写';
-            }
-            
-            result += '\n';
+        // 获取最新的问卷数据结构
+        const response = await fetch('questions.json');
+        const data = await response.json();
+
+        // 生成简化的结果，不分section，跳过未填写的内容
+        let allResults = [];
+        data.sections.forEach(section => {
+            section.questions.forEach(question => {
+                let value;
+                if (question.type === 'checkbox') {
+                    const selectedOptions = Array.from(formData.getAll(question.id));
+                    if (selectedOptions.length > 0) {  // 只添加已选择的复选框
+                        value = selectedOptions.join('、');
+                        allResults.push(`${getResultTitle(question.title)}:${value}`);
+                    }
+                } else {
+                    value = formData.get(question.id);
+                    if (value && value.trim() !== '') {  // 只添加已填写的内容
+                        allResults.push(`${getResultTitle(question.title)}:${value}`);
+                    }
+                }
+            });
         });
+        result = allResults.join(';');
 
         // 显示结果
         document.getElementById('questionnaireForm').style.display = 'none';

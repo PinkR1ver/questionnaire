@@ -26,11 +26,29 @@ h1 {
     color: #2c3e50;
 }
 
+.section-title {
+    font-size: 1.3rem;
+    color: #2c3e50;
+    margin: 2rem 0 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #3498db;
+}
+
 .question-item {
     margin-bottom: 2rem;
     padding: 1rem;
     border: 1px solid #e0e0e0;
     border-radius: 4px;
+}
+
+.question-note {
+    margin-top: 1rem;
+    padding: 0.8rem;
+    background-color: #f8f9fa;
+    border-left: 3px solid #3498db;
+    font-size: 0.9rem;
+    color: #666;
+    white-space: pre-line;
 }
 
 .question-title {
