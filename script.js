@@ -129,19 +129,20 @@ function renderQuestionnaire(data) {
                         optionDiv.appendChild(label);
                         optionsContainer.appendChild(optionDiv);
                     });
-
-                    // 如果有注释，添加注释说明
-                    if (question.note) {
-                        const noteDiv = document.createElement('div');
-                        noteDiv.className = 'question-note';
-                        noteDiv.textContent = question.note;
-                        optionsContainer.appendChild(noteDiv);
-                    }
                     break;
             }
 
             questionDiv.appendChild(title);
             questionDiv.appendChild(optionsContainer);
+            
+            // 如果有注释，添加注释说明（对所有类型的问题）
+            if (question.note) {
+                const noteDiv = document.createElement('div');
+                noteDiv.className = 'question-note';
+                noteDiv.textContent = question.note;
+                questionDiv.appendChild(noteDiv);
+            }
+            
             container.appendChild(questionDiv);
         });
     });
