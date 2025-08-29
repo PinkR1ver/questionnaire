@@ -267,7 +267,7 @@
                         "是",
                         "否"
                     ],
-                    "note": "* 勾选\"否\"则跳过下一个问题",
+                    "note": "* 勾选\"否\"则跳过下面1个问题",
                     "required": true
                 },
                 {
@@ -351,6 +351,7 @@
                         "部分影响",
                         "无法活动"
                     ],
+                    "note": "* 勾选\"活动如常\"则跳过下面2个问题",
                     "required": true
                 },
                 {
@@ -365,17 +366,16 @@
                         "旅行",
                         "运动",
                         "睡眠",
-                        "其他",
-                        "均无影响"
+                        "其他"
                     ],
-                    "required": true
+                    "required": false
                 },
                 {
                     "id": "special8",
                     "type": "text",
                     "title": "\"头晕\"影响日常活动的天数（失能天数(3月)）",
                     "placeholder": "__天（近3个月内）",
-                    "required": true
+                    "required": false
                 },
                 {
                     "id": "special9",
@@ -393,12 +393,13 @@
                         "持续未缓解",
                         "发作时长不规律"
                     ],
+                    "note": "* 勾选\"持续未缓解\"则跳过下面2个问题",
                     "required": true
                 },
                 {
                     "id": "special10",
                     "type": "radio",
-                    "title": "\"头晕\"间隔多久复发1次（复发频率）",
+                    "title": "\"头晕\"间隔多久复发1次？（复发频率）",
                     "options": [
                         "每月发作天数超过15天",
                         "每月发作天数至少1天，但不超过15天",
@@ -406,14 +407,15 @@
                         "从未复发过",
                         "复发频率不规律"
                     ],
-                    "required": true
+                    "note": "* 勾选\"数月发作1次或从未复发过\"则跳过下面1个问题",
+                    "required": false
                 },
                 {
                     "id": "special11",
                     "type": "text",
                     "title": "\"头晕\"连续每天复发天数？（频发周期）",
                     "placeholder": "__天__周__月__年",
-                    "required": true
+                    "required": false
                 },
                 {
                     "id": "special12",
@@ -548,19 +550,19 @@
                 {
                     "id": "special15",
                     "type": "date",
-                    "title": "最严重1次发作时间？（最严重发作）",
-                    "required": true
+                    "title": "最严重1次发作时间？若持续性\"头晕\"可跳过本题。（最严重发作）",
+                    "required": false
                 },
                 {
                     "id": "special16",
                     "type": "date",
-                    "title": "最近1次发作时间？（末次发作）",
-                    "required": true
+                    "title": "最近1次发作时间？若持续性\"头晕\"可跳过本题。（末次发作）",
+                    "required": false
                 },
                 {
                     "id": "special17",
                     "type": "checkbox",
-                    "title": "以往有因头晕就诊的经历吗（以往就诊机构类型）",
+                    "title": "以往有因\"头晕\"就诊的经历吗？（以往就诊机构类型）",
                     "options": [
                         "无就诊经历",
                         "乡村或社区医院",
@@ -569,13 +571,13 @@
                         "省级医院",
                         "其他"
                     ],
-                    "note": "勾选无就诊经历选项跳过下面问题",
+                    "note": "勾选\"无就诊经历\"选项跳过下面4个问题",
                     "required": true
                 },
                 {
                     "id": "special18",
                     "type": "radio",
-                    "title": "\"头晕\"第一个挂号就诊的科室（以往首诊科室类型）",
+                    "title": "\"头晕\"第一个挂号就诊的科室：（以往首诊科室类型）",
                     "options": [
                         "神经内科",
                         "耳鼻喉科",
@@ -587,12 +589,12 @@
                         "急诊科",
                         "其他"
                     ],
-                    "required": true
+                    "required": false
                 },
                 {
                     "id": "special19",
                     "type": "checkbox",
-                    "title": "\"头晕\"就诊期间做过哪些检查（以往检查项目类型）",
+                    "title": "\"头晕\"就诊期间做过哪些检查？（以往检查类型）",
                     "options": [
                         "头颅CT",
                         "头颅MRI",
@@ -608,12 +610,12 @@
                         "其他",
                         "未做过任何检查"
                     ],
-                    "required": true
+                    "required": false
                 },
                 {
                     "id": "special20",
                     "type": "checkbox",
-                    "title": "\"头晕\"以往就诊最终病因诊断（以往病因诊断类型）",
+                    "title": "\"头晕\"以往就诊最终病因诊断：（以往诊断类型）",
                     "options": [
                         "眩晕症",
                         "腔隙性脑梗死",
@@ -632,12 +634,12 @@
                         "其他",
                         "未给出明确的病因诊断"
                     ],
-                    "required": true
+                    "required": false
                 },
                 {
                     "id": "special21",
                     "type": "radio",
-                    "title": "近一年因头晕支出的医疗费用（年度诊疗费用）",
+                    "title": "近一年因头晕支出的医疗费用：（年度诊疗费用）",
                     "options": [
                         "不足50元",
                         "50-100元",
@@ -647,7 +649,7 @@
                         "5000-10000元",
                         "超过10000元"
                     ],
-                    "required": true
+                    "required": false
                 }
             ]
         }
