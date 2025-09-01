@@ -1,0 +1,17 @@
+{
+    "title": "测试问卷",
+    "sections": [
+        {
+            "title": "示例部分",
+            "questions": [
+                { "id": "t1", "type": "text", "title": "测试文本（文本）", "required": true },
+                { "id": "t2", "type": "radio", "title": "单选题（单选）", "options": ["A", {"label": "B(补充)", "requiresDetail": true}, "C"], "required": true },
+                { "id": "t3", "type": "checkbox", "title": "多选题（多选）", "options": ["X", {"label": "Y(补充)", "requiresDetail": true}, {"label": "无其他", "exclusive": true}], "required": true },
+                { "id": "t4", "type": "date", "title": "日期题（日期）", "required": false },
+                { "id": "t5", "type": "text", "title": "仅当t2为A时显示（逻辑示例）", "required": false, "visibleIf": {"questionId": "t2", "anyOf": ["A"]} }
+            ]
+        }
+    ]
+}
+
+

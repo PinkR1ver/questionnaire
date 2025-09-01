@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>问卷制作</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>问卷制作</h1>
+        <div class="builder-toolbar">
+            <input id="fileInput" type="text" placeholder="question_myform.json" style="flex:1; padding:0.5rem; border:1px solid #ddd; border-radius:4px;"/>
+            <button id="addSectionBtn" class="mini-btn" type="button">新增部分</button>
+            <button id="importBtn" class="mini-btn" type="button">导入JSON</button>
+            <button id="templateBtn" class="mini-btn" type="button">插入模板</button>
+            <button id="exportBtn" class="mini-btn" type="button">预览JSON</button>
+            <button id="saveBtn" class="mini-btn" type="button">保存</button>
+        </div>
+
+        <div class="row" style="justify-content: space-between; margin-bottom:0.5rem;">
+            <input id="titleInput" type="text" placeholder="问卷标题" style="flex:1; padding:0.5rem; border:1px solid #ddd; border-radius:4px;"/>
+            <button id="validateBtn" class="mini-btn" type="button" style="margin-left:0.5rem;">校验问卷</button>
+        </div>
+        <div id="sections"></div>
+
+        <div id="errBox" class="error-message">错误</div>
+        <div id="okBox" class="result-text" style="display:none;">已保存</div>
+        <div id="jsonPreview" class="result-text" style="display:none;"></div>
+    </div>
+    <script>
+    const state = {
+        title: '新问卷',
+        sections: []
+    };
+
+    function el(tag, attrs={}, ...children){
+        const node = document.createElement(tag);
+        Object.entries(attrs).forEach(([k,v])=>{
+            if (k === 'class') {
+                node.className = v;
+            } else if (k === 'html') {
+                node.innerHTML = v;
+            } else if (k.startsWith('on') && typeof v === 'function') {
+                node.addEventListener(k.substring(2), v);
+            } else {
+                node.setAttribute(k, v);
+            }
+        });
+        children.forEach(c=> node.appendChild(typeof c === 'string' ? document.createTextNode(c) : c));
+        return node;
+    }
+
+    function render(){
+        const root = document.getElementById('sections');
+        root.innerHTML = '';
+        state.sections.forEach((section, si)=>{
+            const sec = el('div', {class:'section-card', draggable:'true'});
+            const header = el('div', {class:'section-header'},
+                el('div', {class:'row', style:'flex:1;'},
+                    el('span', {class:'drag-handle'}, '≡'),
+                    el('input', {value: section.title || `部分${si+1}`, style:'flex:1; padding:0.4rem; border:1px solid #ddd; border-radius:4px;'})
+                ),
+                el('div', {},
+                    el('button', {class:'mini-btn', onclick:()=>{ section.questions.push(newQuestion()); render(); }}, '新增题目'),
+                    el('button', {class:'mini-btn', style:'margin-left:0.5rem', onclick:()=>{ if(si>0){ const t=state.sections[si-1]; state.sections[si-1]=state.sections[si]; state.sections[si]=t; render(); } }}, '上移'),
+                    el('button', {class:'mini-btn', style:'margin-left:0.5rem', onclick:()=>{ if(si<state.sections.length-1){ const t=state.sections[si+1]; state.sections[si+1]=state.sections[si]; state.sections[si]=t; render(); } }}, '下移'),
+                    el('button', {class:'mini-btn', style:'margin-left:0.5rem', onclick:()=>{ const copy = JSON.parse(JSON.stringify(section)); state.sections.splice(si+1,0,copy); render(); }}, '复制'),
+                    el('button', {class:'mini-btn', style:'margin-left:0.5rem', onclick:()=>{ state.sections.splice(si,1); render(); }}, '删除部分')
+                )
+            );
+            header.firstChild.addEventListener('input', (e)=>{ section.title = e.target.value; });
+            sec.appendChild(header);
+
+            // questions
+            section.questions.forEach((q, qi)=>{
+                const qc = el('div', {class:'question-card', draggable:'true'});
+                const grid = el('div', {class:'question-grid'});
+                const title = el('input', {value:q.title||'', placeholder:'题目标题（可含括号备注）', style:'padding:0.4rem; border:1px solid #ddd; border-radius:4px;'});
+                title.addEventListener('input', e=> q.title = e.target.value);
+                const id = el('input', {value:q.id||'', placeholder:'题目ID（唯一）', style:'padding:0.4rem; border:1px solid #ddd; border-radius:4px;'});
+                id.addEventListener('input', e=> q.id = e.target.value);
+                const type = el('select', {style:'padding:0.4rem; border:1px solid #ddd; border-radius:4px;'},
+                    el('option', {value:'text', html:'文本'}),
+                    el('option', {value:'radio', html:'单选'}),
+                    el('option', {value:'checkbox', html:'多选'}),
+                    el('option', {value:'date', html:'日期'})
+                );
+                type.value = q.type || 'text';
+                type.addEventListener('change', e=> { q.type = e.target.value; if(q.type!=='radio'&&q.type!=='checkbox') q.options=undefined; render(); });
+                const required = el('label', {},
+                    el('input', {type:'checkbox', checked: !!q.required}),
+                    ' 必填'
+                );
+                required.firstChild.addEventListener('change', e=> q.required = e.target.checked);
+                grid.appendChild(title);
+                grid.appendChild(id);
+                grid.appendChild(type);
+                grid.appendChild(required);
+                qc.appendChild(grid);
+
+                // options
+                if (q.type === 'radio' || q.type === 'checkbox'){
+                    const optWrap = el('div');
+                    (q.options||[]).forEach((opt, oi)=>{
+                        const labelVal = typeof opt === 'string' ? opt : (opt.label||'');
+                        const requiresDetail = typeof opt === 'object' && !!opt.requiresDetail;
+                        const exclusive = typeof opt === 'object' && !!opt.exclusive;
+                        const row = el('div', {class:'option-row'},
+                            el('input', {value: labelVal, placeholder:'选项文本', style:'padding:0.35rem; border:1px solid #ddd; border-radius:4px;'}),
+                            el('label', {}, el('input', {type:'checkbox', checked: requiresDetail}), ' 补充'),
+                            el('label', {}, el('input', {type:'checkbox', checked: exclusive}), ' 互斥'),
+                            el('button', {class:'mini-btn', onclick:()=>{ q.options.splice(oi,1); render(); }}, '删除')
+                        );
+                        row.children[0].addEventListener('input', e=>{
+                            const v = e.target.value;
+                            if (typeof opt === 'string') q.options[oi] = v; else q.options[oi].label = v;
+                        });
+                        row.children[1].firstChild.addEventListener('change', e=>{
+                            const v = e.target.checked;
+                            if (typeof opt === 'string') q.options[oi] = { label: labelVal, requiresDetail: v, exclusive };
+                            else q.options[oi].requiresDetail = v;
+                        });
+                        row.children[2].firstChild.addEventListener('change', e=>{
+                            const v = e.target.checked;
+                            if (typeof opt === 'string') q.options[oi] = { label: labelVal, requiresDetail, exclusive: v };
+                            else q.options[oi].exclusive = v;
+                        });
+                        optWrap.appendChild(row);
+                    });
+                    const addRow = el('div', {class:'row'},
+                        el('button', {class:'mini-btn', onclick:()=>{ q.options = q.options || []; q.options.push('新选项'); render(); }}, '新增选项')
+                    );
+                    optWrap.appendChild(addRow);
+                    qc.appendChild(optWrap);
+                }
+
+                // visibleIf 多条件编辑（AND/OR 切换）
+                const logicWrap = el('div', {class:'logic-wrap'});
+                const modeSel = el('select', {style:'padding:0.3rem; border:1px solid #ddd; border-radius:4px; margin-bottom:0.5rem;'},
+                    el('option', {value:'none', html:'无条件'}),
+                    el('option', {value:'any', html:'任一满足(OR)显示'}),
+                    el('option', {value:'all', html:'全部满足(AND)显示'})
+                );
+                const condList = el('div');
+                const addCondBtn = el('button', {class:'mini-btn', type:'button'}, '新增条件');
+                const clearCondBtn = el('button', {class:'mini-btn', type:'button', style:'margin-left:0.5rem;'}, '清除');
+
+                function loadLogicUI(){
+                    condList.innerHTML = '';
+                    if (!q.visibleIf){ modeSel.value = 'none'; return; }
+                    if (Array.isArray(q.visibleIf)) { modeSel.value='all'; var conds=q.visibleIf; }
+                    else if (q.visibleIf.any){ modeSel.value='any'; var conds=q.visibleIf.any; }
+                    else if (q.visibleIf.all){ modeSel.value='all'; var conds=q.visibleIf.all; }
+                    else if (q.visibleIf.questionId){ modeSel.value='all'; var conds=[q.visibleIf]; }
+                    else { modeSel.value='none'; var conds=[]; }
+                    conds.forEach((c, ci)=>{
+                        const row = el('div', {class:'cond-row'},
+                            el('input', {value:c.questionId||'', placeholder:'依赖题ID', style:'padding:0.35rem; border:1px solid #ddd; border-radius:4px;'}),
+                            el('input', {value:(c.anyOf||[]).join(','), placeholder:'匹配值(逗号分隔)', style:'padding:0.35rem; border:1px solid #ddd; border-radius:4px;'}),
+                            el('button', {class:'mini-btn', type:'button', onclick:()=>{ conds.splice(ci,1); saveLogicFromUI(modeSel.value, conds); loadLogicUI(); }}, '删除')
+                        );
+                        row.children[0].addEventListener('input', e=>{ c.questionId = e.target.value.trim(); saveLogicFromUI(modeSel.value, conds); });
+                        row.children[1].addEventListener('input', e=>{ c.anyOf = e.target.value.split(',').map(s=>s.trim()).filter(Boolean); saveLogicFromUI(modeSel.value, conds); });
+                        condList.appendChild(row);
+                    });
+                }
+                function saveLogicFromUI(mode, conds){
+                    if (mode==='none'){ q.visibleIf = undefined; return; }
+                    const norm = conds.map(c=>({ questionId:c.questionId||'', anyOf:Array.isArray(c.anyOf)?c.anyOf:[] }));
+                    if (mode==='any') q.visibleIf = { any: norm };
+                    else q.visibleIf = { all: norm };
+                }
+                modeSel.addEventListener('change', ()=>{
+                    if (modeSel.value==='none'){ q.visibleIf = undefined; condList.innerHTML=''; return; }
+                    const conds = [];
+                    saveLogicFromUI(modeSel.value, conds);
+                    loadLogicUI();
+                });
+                addCondBtn.addEventListener('click', ()=>{
+                    if (modeSel.value==='none'){ modeSel.value='all'; saveLogicFromUI('all', []); }
+                    const conds = (q.visibleIf?.any) || (q.visibleIf?.all) || (Array.isArray(q.visibleIf)? q.visibleIf : []);
+                    conds.push({ questionId:'', anyOf:[] });
+                    saveLogicFromUI(modeSel.value, conds);
+                    loadLogicUI();
+                });
+                clearCondBtn.addEventListener('click', ()=>{ q.visibleIf = undefined; modeSel.value='none'; condList.innerHTML=''; });
+                logicWrap.appendChild(modeSel);
+                logicWrap.appendChild(condList);
+                const btnRow = el('div', {class:'row', style:'margin-top:0.25rem;'}, addCondBtn, clearCondBtn);
+                logicWrap.appendChild(btnRow);
+                qc.appendChild(logicWrap);
+                loadLogicUI();
+
+                // question ops: 上移 下移 复制 删除
+                const ops = el('div', {class:'row', style:'margin-top:0.5rem;'},
+                    el('button', {class:'mini-btn', onclick:()=>{ if(qi>0){ const t=section.questions[qi-1]; section.questions[qi-1]=section.questions[qi]; section.questions[qi]=t; render(); } }}, '上移'),
+                    el('button', {class:'mini-btn', onclick:()=>{ if(qi<section.questions.length-1){ const t=section.questions[qi+1]; section.questions[qi+1]=section.questions[qi]; section.questions[qi]=t; render(); } }}, '下移'),
+                    el('button', {class:'mini-btn', onclick:()=>{ const copy = JSON.parse(JSON.stringify(q)); section.questions.splice(qi+1,0,copy); render(); }}, '复制'),
+                    el('button', {class:'mini-btn', onclick:()=>{ section.questions.splice(qi,1); render(); }}, '删除')
+                );
+                qc.appendChild(ops);
+
+                section.questions[qi] = q; // ensure reference
+                sec.appendChild(qc);
+            });
+
+            // add to root
+            root.appendChild(sec);
+        });
+    }
+
+    function newQuestion(){
+        return { id:'', type:'text', title:'', required:false };
+    }
+
+    document.getElementById('addSectionBtn').addEventListener('click', ()=>{
+        state.sections.push({ title: `新部分${state.sections.length+1}`, questions: [] });
+        render();
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', ()=>{
+        const preview = document.getElementById('jsonPreview');
+        preview.textContent = JSON.stringify({ title: state.title, sections: state.sections }, null, 2);
+        preview.style.display = 'block';
+    });
+
+    async function save(){
+        const file = document.getElementById('fileInput').value.trim();
+        const err = document.getElementById('errBox');
+        const ok = document.getElementById('okBox');
+        const payload = { title: state.title, sections: state.sections };
+        err.style.display = 'none';
+        ok.style.display = 'none';
+        try{
+            const resp = await fetch('/api/save_questionnaire', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ file, content: payload }) });
+            const data = await resp.json();
+            if (!resp.ok || !data.ok) throw new Error(data.error || '保存失败');
+            ok.textContent = `保存成功：${data.file}`;
+            ok.style.display = 'block';
+        }catch(e){
+            err.textContent = e.message || String(e);
+            err.style.display = 'block';
+        }
+    }
+    document.getElementById('saveBtn').addEventListener('click', save);
+
+    // 导入 JSON
+    document.getElementById('importBtn').addEventListener('click', async ()=>{
+        const text = prompt('粘贴要导入的 JSON：');
+        if (!text) return;
+        try{
+            const obj = JSON.parse(text);
+            if (!obj || !Array.isArray(obj.sections)) throw new Error('非问卷JSON');
+            state.title = obj.title || '新问卷';
+            state.sections = obj.sections || [];
+            render();
+        }catch(e){
+            alert('导入失败：' + (e.message||e));
+        }
+    });
+
+    // 模板插入
+    document.getElementById('templateBtn').addEventListener('click', ()=>{
+        const tpl = { title:'模板部分', questions:[
+            { id:'q_text', type:'text', title:'示例文本（文本）', required:true },
+            { id:'q_radio', type:'radio', title:'示例单选（单选）', required:true, options:['选项A',{label:'选项B',requiresDetail:true}] },
+            { id:'q_check', type:'checkbox', title:'示例多选（多选）', required:true, options:['甲','乙',{label:'无其他',exclusive:true}] }
+        ]};
+        state.sections.push(tpl);
+        render();
+    });
+
+    // 问卷标题
+    const titleInput = document.getElementById('titleInput');
+    titleInput.value = state.title;
+    titleInput.addEventListener('input', e=> state.title = e.target.value);
+
+    // 校验
+    document.getElementById('validateBtn').addEventListener('click', ()=>{
+        const err = [];
+        const ids = new Set();
+        state.sections.forEach((s,si)=>{
+            if (!s.title || !s.title.trim()) err.push(`部分${si+1} 标题为空`);
+            s.questions.forEach((q,qi)=>{
+                if (!q.id || !q.id.trim()) err.push(`部分${si+1} 题${qi+1} 缺少ID`);
+                else if (ids.has(q.id)) err.push(`题ID重复: ${q.id}`);
+                else ids.add(q.id);
+                if (!q.title || !q.title.trim()) err.push(`部分${si+1} 题${qi+1} 标题为空`);
+                if ((q.type==='radio' || q.type==='checkbox')){
+                    if (!Array.isArray(q.options) || q.options.length===0) err.push(`部分${si+1} 题${qi+1} 没有选项`);
+                    (q.options||[]).forEach((opt,oi)=>{
+                        const label = typeof opt==='string' ? opt : (opt && opt.label);
+                        if (!label || !label.trim()) err.push(`部分${si+1} 题${qi+1} 第${oi+1}个选项为空`);
+                    });
+                }
+                // 校验 visibleIf 引用的 questionId 是否存在
+                const checkConds = (conds)=>{ conds.forEach(c=>{ if (c.questionId && !ids.has(c.questionId)) err.push(`部分${si+1} 题${qi+1} 条件引用不存在的ID: ${c.questionId}`); }); };
+                if (Array.isArray(q.visibleIf)) checkConds(q.visibleIf);
+                else if (q.visibleIf && Array.isArray(q.visibleIf.any)) checkConds(q.visibleIf.any);
+                else if (q.visibleIf && Array.isArray(q.visibleIf.all)) checkConds(q.visibleIf.all);
+                else if (q.visibleIf && q.visibleIf.questionId) checkConds([q.visibleIf]);
+            });
+        });
+        const box = document.getElementById('jsonPreview');
+        if (err.length){ box.textContent = err.join('\n'); box.style.display='block'; }
+        else { box.textContent = '校验通过'; box.style.display='block'; }
+    });
+
+    // 初始渲染
+    render();
+
+    // 拖拽：部分
+    let dragSecIndex = null;
+    document.addEventListener('dragstart', (e)=>{
+        const sec = e.target.closest('.section-card');
+        if (sec){ dragSecIndex = Array.from(document.querySelectorAll('.section-card')).indexOf(sec); sec.classList.add('dragging'); }
+        const q = e.target.closest('.question-card');
+        if (q){ q.classList.add('dragging'); }
+    });
+    document.addEventListener('dragend', (e)=>{
+        const d = document.querySelector('.dragging'); if(d) d.classList.remove('dragging');
+        dragSecIndex = null;
+        document.querySelectorAll('.drag-over').forEach(x=>x.classList.remove('drag-over'));
+    });
+    document.addEventListener('dragover', (e)=>{
+        e.preventDefault();
+        const overSec = e.target.closest('.section-card');
+        if (overSec){ overSec.classList.add('drag-over'); }
+        const overQ = e.target.closest('.question-card');
+        if (overQ){ overQ.classList.add('drag-over'); }
+    });
+    document.addEventListener('dragleave', (e)=>{
+        const s = e.target.closest('.section-card'); if (s) s.classList.remove('drag-over');
+        const q = e.target.closest('.question-card'); if (q) q.classList.remove('drag-over');
+    });
+    document.addEventListener('drop', (e)=>{
+        e.preventDefault();
+        const secEls = Array.from(document.querySelectorAll('.section-card'));
+        const qEls = Array.from(document.querySelectorAll('.question-card'));
+        const fromSecEl = document.querySelector('.section-card.dragging');
+        const fromQEl = document.querySelector('.question-card.dragging');
+        const toSecEl = e.target.closest('.section-card');
+        const toQEl = e.target.closest('.question-card');
+        if (fromSecEl && toSecEl && fromSecEl!==toSecEl){
+            const fromIdx = secEls.indexOf(fromSecEl);
+            const toIdx = secEls.indexOf(toSecEl);
+            const item = state.sections.splice(fromIdx,1)[0];
+            state.sections.splice(toIdx,0,item);
+            render();
+        } else if (fromQEl && toQEl && fromQEl!==toQEl){
+            // 在同一部分内的题目排序
+            const parentSec = toQEl.closest('.section-card');
+            const secIdx = secEls.indexOf(parentSec);
+            const qs = state.sections[secIdx].questions;
+            const fromIdx = Array.from(parentSec.querySelectorAll('.question-card')).indexOf(fromQEl);
+            const toIdx = Array.from(parentSec.querySelectorAll('.question-card')).indexOf(toQEl);
+            const item = qs.splice(fromIdx,1)[0];
+            qs.splice(toIdx,0,item);
+            render();
+        }
+    });
+    </script>
+</body>
+</html>
+
+

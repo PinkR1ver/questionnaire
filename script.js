@@ -1,11 +1,16 @@
-// 从questions.json加载问卷数据
-async function loadQuestions() {
+let currentQuestionnaireFile = '';
+let currentQuestionnaireData = null;
+
+// 加载指定问卷文件
+async function loadQuestions(file = currentQuestionnaireFile) {
     try {
-        const response = await fetch('questions.json');
+        const response = await fetch(file);
         if (!response.ok) {
             throw new Error('加载问卷数据失败');
         }
         const data = await response.json();
+        currentQuestionnaireFile = file;
+        currentQuestionnaireData = data;
         renderQuestionnaire(data);
     } catch (error) {
         console.error('加载问卷失败:', error);
@@ -49,6 +54,7 @@ function renderQuestionnaire(data) {
         section.questions.forEach(question => {
             const questionDiv = document.createElement('div');
             questionDiv.className = 'question-item';
+            questionDiv.setAttribute('data-question-id', question.id);
             
             const title = document.createElement('div');
             title.className = 'question-title';
@@ -56,6 +62,30 @@ function renderQuestionnaire(data) {
             
             const optionsContainer = document.createElement('div');
             optionsContainer.className = 'options-container';
+
+            // 工具：判断选项是否需要补充输入
+            const optionNeedsDetail = (text) => {
+                if (!text) return false;
+                if (typeof text === 'string') {
+                    return text.includes('其他') || text.includes('（补充）');
+                }
+                // 若采用对象选项格式 { label, requiresDetail }
+                if (typeof text === 'object' && text !== null) {
+                    return !!text.requiresDetail;
+                }
+                return false;
+            };
+
+            // 工具：获取选项显示文本
+            const getOptionLabel = (opt) => typeof opt === 'string' ? opt : (opt && opt.label ? opt.label : '');
+
+            // 工具：判断选项是否为互斥（如“无就诊经历/否认/未做过任何检查”等）
+            const optionIsExclusive = (opt) => {
+                if (typeof opt === 'object' && opt !== null && opt.exclusive === true) return true;
+                const label = getOptionLabel(opt);
+                const exclusiveKeywords = ['无就诊经历', '否认', '未做过任何检查', '无诱发因素', '无伴随症状'];
+                return exclusiveKeywords.some(k => label.includes(k));
+            };
 
             switch (question.type) {
                 case 'text':
@@ -90,43 +120,118 @@ function renderQuestionnaire(data) {
                     break;
 
                 case 'radio':
-                    question.options.forEach(option => {
+                    const radioDetailInputs = [];
+                    question.options.forEach((option, optIndex) => {
                         const optionDiv = document.createElement('div');
                         optionDiv.className = 'option-item';
                         
                         const radio = document.createElement('input');
                         radio.type = 'radio';
                         radio.name = question.id;
-                        radio.value = option;
+                        radio.value = getOptionLabel(option);
                         radio.required = question.required;
                         
                         const label = document.createElement('label');
-                        label.textContent = option;
+                        label.textContent = getOptionLabel(option);
+
+                        // 行内补充输入
+                        const needsDetail = optionNeedsDetail(option);
+                        let detailInput;
+                        if (needsDetail) {
+                            detailInput = document.createElement('input');
+                            detailInput.type = 'text';
+                            detailInput.name = `${question.id}__detail__${optIndex}`;
+                            detailInput.placeholder = '请补充';
+                            detailInput.className = 'inline-detail-input hidden';
+                            radioDetailInputs.push(detailInput);
+                        }
+
+                        radio.addEventListener('change', () => {
+                            // 切换单选时，先隐藏同题所有补充输入
+                            radioDetailInputs.forEach(inp => {
+                                inp.classList.add('hidden');
+                                inp.required = false;
+                                inp.value = inp.value; // 保留已填内容
+                            });
+                            if (needsDetail && detailInput && radio.checked) {
+                                detailInput.classList.remove('hidden');
+                                if (question.required) detailInput.required = true;
+                            }
+                        });
                         
                         optionDiv.appendChild(radio);
                         optionDiv.appendChild(label);
+                        if (needsDetail && detailInput) optionDiv.appendChild(detailInput);
                         optionsContainer.appendChild(optionDiv);
                     });
                     break;
 
                 case 'checkbox':
-                    question.options.forEach(option => {
+                    const checkboxGroup = [];
+                    question.options.forEach((option, optIndex) => {
                         const optionDiv = document.createElement('div');
                         optionDiv.className = 'option-item';
                         
                         const checkbox = document.createElement('input');
                         checkbox.type = 'checkbox';
                         checkbox.name = question.id;
-                        checkbox.value = option;
+                        checkbox.value = getOptionLabel(option);
                         if (question.required) {
                             checkbox.setAttribute('data-required', 'true');
                         }
                         
                         const label = document.createElement('label');
-                        label.textContent = option;
+                        label.textContent = getOptionLabel(option);
+
+                        // 行内补充输入
+                        const needsDetail = optionNeedsDetail(option);
+                        let detailInput;
+                        if (needsDetail) {
+                            detailInput = document.createElement('input');
+                            detailInput.type = 'text';
+                            detailInput.name = `${question.id}__detail__${optIndex}`;
+                            detailInput.placeholder = '请补充';
+                            detailInput.className = 'inline-detail-input hidden';
+                        }
+
+                        const isExclusive = optionIsExclusive(option);
+                        checkboxGroup.push({ checkbox, detailInput, isExclusive });
+
+                        checkbox.addEventListener('change', () => {
+                            if (!needsDetail || !detailInput) return;
+                            if (checkbox.checked) {
+                                detailInput.classList.remove('hidden');
+                                if (question.required) detailInput.required = true;
+                            } else {
+                                detailInput.classList.add('hidden');
+                                detailInput.required = false;
+                                detailInput.value = '';
+                            }
+                        });
+
+                        // 互斥逻辑：勾选互斥项 -> 取消其他；勾选普通项 -> 取消互斥项
+                        checkbox.addEventListener('change', () => {
+                            if (!checkbox.checked) return;
+                            if (isExclusive) {
+                                checkboxGroup.forEach(item => {
+                                    if (item.checkbox !== checkbox && item.checkbox.checked) {
+                                        item.checkbox.checked = false;
+                                        item.checkbox.dispatchEvent(new Event('change'));
+                                    }
+                                });
+                            } else {
+                                checkboxGroup.forEach(item => {
+                                    if (item.isExclusive && item.checkbox.checked) {
+                                        item.checkbox.checked = false;
+                                        item.checkbox.dispatchEvent(new Event('change'));
+                                    }
+                                });
+                            }
+                        });
                         
                         optionDiv.appendChild(checkbox);
                         optionDiv.appendChild(label);
+                        if (needsDetail && detailInput) optionDiv.appendChild(detailInput);
                         optionsContainer.appendChild(optionDiv);
                     });
                     break;
@@ -144,6 +249,95 @@ function renderQuestionnaire(data) {
             }
             
             container.appendChild(questionDiv);
+
+            // 题间逻辑：
+            // 支持 visibleIf 多种形式：
+            // 1) 对象：{ questionId, anyOf }
+            // 2) 数组：[ {questionId, anyOf}, ... ] => AND
+            // 3) 对象：{ any: [cond,...] } => OR
+            // 4) 对象：{ all: [cond,...] } => AND
+            if (question.visibleIf) {
+                const setQuestionVisibility = (isVisible) => {
+                    if (isVisible) {
+                        questionDiv.style.display = '';
+                    } else {
+                        questionDiv.style.display = 'none';
+                    }
+                    // 启用/禁用内部输入，避免浏览器校验与提交携带
+                    const inputs = questionDiv.querySelectorAll('input');
+                    inputs.forEach(inp => {
+                        inp.disabled = !isVisible;
+                        if (!isVisible) {
+                            if (inp.type === 'checkbox' || inp.type === 'radio') {
+                                inp.checked = false;
+                            } else if (inp.type === 'text' || inp.type === 'date') {
+                                inp.value = '';
+                                const display = questionDiv.querySelector('.date-display');
+                                if (display) display.textContent = '';
+                            }
+                        }
+                    });
+                };
+
+                const evaluateOne = (cond) => {
+                    if (!cond || !cond.questionId || !Array.isArray(cond.anyOf)) return false;
+                    const depInputs = document.querySelectorAll(`input[name="${cond.questionId}"]`);
+                    if (depInputs.length === 0) return false;
+                    const selectedValues = [];
+                    depInputs.forEach(inp => {
+                        if ((inp.type === 'checkbox' || inp.type === 'radio') && inp.checked) {
+                            selectedValues.push(inp.value);
+                        } else if ((inp.type === 'text' || inp.type === 'date') && inp.value && inp.value.trim() !== '') {
+                            selectedValues.push(inp.value.trim());
+                        }
+                    });
+                    return selectedValues.some(v => cond.anyOf.includes(v));
+                };
+
+                const parseConditions = () => {
+                    const vi = question.visibleIf;
+                    if (Array.isArray(vi)) {
+                        return { mode: 'ALL', conds: vi };
+                    }
+                    if (vi && vi.questionId && Array.isArray(vi.anyOf)) {
+                        return { mode: 'ALL', conds: [vi] };
+                    }
+                    if (vi && Array.isArray(vi.any)) {
+                        return { mode: 'ANY', conds: vi.any };
+                    }
+                    if (vi && Array.isArray(vi.all)) {
+                        return { mode: 'ALL', conds: vi.all };
+                    }
+                    return { mode: 'ALL', conds: [] };
+                };
+
+                const evaluateVisible = () => {
+                    const { mode, conds } = parseConditions();
+                    if (!conds.length) { setQuestionVisibility(false); return; }
+                    const res = conds.map(evaluateOne);
+                    const visible = mode === 'ANY' ? res.some(Boolean) : res.every(Boolean);
+                    setQuestionVisibility(visible);
+                };
+
+                // 初始隐藏，随后评估
+                setQuestionVisibility(false);
+                evaluateVisible();
+
+                // 监听所有依赖题目
+                const watched = new Set();
+                const { conds } = parseConditions();
+                conds.forEach(cond => {
+                    if (!cond || !cond.questionId) return;
+                    const key = cond.questionId;
+                    if (watched.has(key)) return;
+                    watched.add(key);
+                    const depInputs = document.querySelectorAll(`input[name="${key}"]`);
+                    depInputs.forEach(inp => {
+                        inp.addEventListener('change', evaluateVisible);
+                        inp.addEventListener('input', evaluateVisible);
+                    });
+                });
+            }
         });
     });
 }
@@ -184,8 +378,8 @@ function generateQRCode(text, containerId) {
 document.getElementById('questionnaireForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
-    // 验证必选的checkbox组是否至少选择了一项
-    const checkboxGroups = document.querySelectorAll('input[type="checkbox"][data-required="true"]');
+    // 验证必选的checkbox组是否至少选择了一项（忽略被隐藏/禁用的题目）
+    const checkboxGroups = document.querySelectorAll('input[type="checkbox"][data-required="true"]:not(:disabled)');
     const groupsMap = new Map();
     checkboxGroups.forEach(checkbox => {
         const name = checkbox.name;
@@ -207,8 +401,7 @@ document.getElementById('questionnaireForm').addEventListener('submit', async fu
     try {
         // 获取问卷数据
         const formData = new FormData(this);
-        const response = await fetch('questions.json');
-        const data = await response.json();
+        const data = currentQuestionnaireData || (await (await fetch(currentQuestionnaireFile)).json());
 
         // 为每个section生成结果
         const sectionResults = data.sections.map(section => {
@@ -218,7 +411,18 @@ document.getElementById('questionnaireForm').addEventListener('submit', async fu
                 if (question.type === 'checkbox') {
                     const selectedOptions = Array.from(formData.getAll(question.id));
                     if (selectedOptions.length > 0) {
+                        // 汇总所有 detail：匹配 name 前缀 `${question.id}__detail__`
+                        const details = [];
+                        for (const [key, val] of formData.entries()) {
+                            if (typeof key === 'string' && key.startsWith(`${question.id}__detail__`)) {
+                                const txt = (val || '').toString().trim();
+                                if (txt) details.push(txt);
+                            }
+                        }
                         value = selectedOptions.join('、');
+                        if (details.length > 0) {
+                            value = `${value}；补充:${details.join('；')}`;
+                        }
                         sectionData.push(`${getResultTitle(question.title)}:${value}`);
                     }
                 } else if (question.type === 'date') {
@@ -228,8 +432,16 @@ document.getElementById('questionnaireForm').addEventListener('submit', async fu
                     }
                 } else {
                     value = formData.get(question.id);
+                    // 单选也可能有补充：收集 `${question.id}__detail__*`
+                    const details = [];
+                    for (const [key, val] of formData.entries()) {
+                        if (typeof key === 'string' && key.startsWith(`${question.id}__detail__`)) {
+                            const txt = (val || '').toString().trim();
+                            if (txt) details.push(txt);
+                        }
+                    }
                     if (value && value.trim() !== '') {
-                        sectionData.push(`${getResultTitle(question.title)}:${value}`);
+                        sectionData.push(`${getResultTitle(question.title)}:${value}${details.length ? `；补充:${details.join('；')}` : ''}`);
                     }
                 }
             });
@@ -286,4 +498,19 @@ function resetForm() {
 }
 
 // 页面加载时初始化问卷
-loadQuestions();
+function getQueryParam(name) {
+    const params = new URLSearchParams(window.location.search);
+    return params.get(name);
+}
+
+async function bootByQuery() {
+    const file = getQueryParam('file');
+    if (!file) {
+        // 未指定问卷，跳转到选择页
+        window.location.href = 'select.html';
+        return;
+    }
+    await loadQuestions(file);
+}
+
+bootByQuery();

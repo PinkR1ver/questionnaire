@@ -153,7 +153,7 @@
                     "options": [
                         "从不吸烟",
                         "偶尔吸烟",
-                        "目前吸烟（补充）",
+                        { "label": "目前吸烟", "requiresDetail": true },
                         "既往吸烟"
                     ],
                     "note": "*从不吸烟：从未吸烟。\n*偶尔吸烟：吸烟，但未达到过平均每天吸烟至少1支，连续吸烟1年以上。\n*目前吸烟：入组前1年内平均每天吸烟至少1支。\n*既往吸烟：一生中曾经达到过平均每天吸烟至少1支，连续吸烟1年以上, 但发病前1年戒烟。",
@@ -166,7 +166,7 @@
                     "options": [
                         "从不饮酒",
                         "偶尔饮酒",
-                        "目前饮酒（补充）",
+                        { "label": "目前饮酒", "requiresDetail": true },
                         "既往饮酒"
                     ],
                     "note": "*从不饮酒：从未饮酒。\n*偶尔喝酒：饮酒，但未达到过每周至少饮酒1次，连续饮酒1年以上。\n*目前饮酒：入组前 1 年内，每周至少饮酒1次，连续饮酒1年以上。\n*既往饮酒：一生中曾经达到过每周至少饮酒1次，连续饮酒1年以上。但发病前1年戒酒。\n*高度白酒（≥42度）：1两 = 20g酒精\n*低度白酒（<42度）：1.4两 = 20g酒精\n*啤酒（520ml）：1瓶 = 20g酒精\n*葡萄酒：6两（300ml）= 20g酒精\n*黄酒：3两 = 20g酒精",
@@ -179,7 +179,7 @@
                     "options": [
                         "从不咖啡因摄入",
                         "偶尔咖啡因摄入",
-                        "每周咖啡因摄入（补充）"
+                        { "label": "每周咖啡因摄入", "requiresDetail": true }
                     ],
                     "note": "*美式咖啡（335ml/杯）：150mg咖啡因\n*速溶咖啡（1.8g/条）：60mg咖啡因\n*可乐（335ml/罐）：35mg咖啡因\n*红牛等功能饮料（240ml/罐）：80mg咖啡因\n*现泡红茶：0.2mg/ml咖啡因\n*现泡绿茶：0.12mg/ml咖啡因\n*黑巧克力：1mg/g咖啡因",
                     "required": true
@@ -196,7 +196,7 @@
                     "id": "health13",
                     "type": "radio",
                     "title": "目前是否在使用药物",
-                    "options": ["否", "是（补充）"],
+                    "options": ["否", { "label": "是", "requiresDetail": true }],
                     "required": true
                 },
                 {
@@ -267,7 +267,6 @@
                         "是",
                         "否"
                     ],
-                    "note": "* 勾选\"否\"则跳过下面1个问题",
                     "required": true
                 },
                 {
@@ -275,7 +274,11 @@
                     "type": "text",
                     "title": "类似\"头晕\"首发时间或病程？（首发病程）",
                     "placeholder": "__小时__天__月__年",
-                    "required": false
+                    "required": false,
+                    "visibleIf": {
+                        "questionId": "special23",
+                        "anyOf": ["是"]
+                    }
                 },
                 {
                     "id": "special2",
@@ -351,7 +354,6 @@
                         "部分影响",
                         "无法活动"
                     ],
-                    "note": "* 勾选\"活动如常\"则跳过下面2个问题",
                     "required": true
                 },
                 {
@@ -368,14 +370,22 @@
                         "睡眠",
                         "其他"
                     ],
-                    "required": false
+                    "required": false,
+                    "visibleIf": {
+                        "questionId": "special6",
+                        "anyOf": ["部分影响", "无法活动"]
+                    }
                 },
                 {
                     "id": "special8",
                     "type": "text",
                     "title": "\"头晕\"影响日常活动的天数（失能天数(3月)）",
                     "placeholder": "__天（近3个月内）",
-                    "required": false
+                    "required": false,
+                    "visibleIf": {
+                        "questionId": "special6",
+                        "anyOf": ["部分影响", "无法活动"]
+                    }
                 },
                 {
                     "id": "special9",
@@ -393,7 +403,6 @@
                         "持续未缓解",
                         "发作时长不规律"
                     ],
-                    "note": "* 勾选\"持续未缓解\"则跳过下面2个问题",
                     "required": true
                 },
                 {
@@ -407,15 +416,32 @@
                         "从未复发过",
                         "复发频率不规律"
                     ],
-                    "note": "* 勾选\"数月发作1次或从未复发过\"则跳过下面1个问题",
-                    "required": false
+                    "required": false,
+                    "visibleIf": {
+                        "questionId": "special9",
+                        "anyOf": [
+                            "不超过1分钟","不超过5分钟","不超过20分钟","不超过6小时","不超过12小时","不超过24小时","不超过3天","超过3天","发作时长不规律"
+                        ]
+                    }
                 },
                 {
                     "id": "special11",
                     "type": "text",
                     "title": "\"头晕\"连续每天复发天数？（频发周期）",
                     "placeholder": "__天__周__月__年",
-                    "required": false
+                    "required": false,
+                    "visibleIf": [
+                        {
+                            "questionId": "special9",
+                            "anyOf": [
+                                "不超过1分钟","不超过5分钟","不超过20分钟","不超过6小时","不超过12小时","不超过24小时","不超过3天","超过3天","发作时长不规律"
+                            ]
+                        },
+                        {
+                            "questionId": "special10",
+                            "anyOf": ["每月发作天数超过15天","每月发作天数至少1天，但不超过15天"]
+                        }
+                    ]
                 },
                 {
                     "id": "special12",
@@ -564,14 +590,13 @@
                     "type": "checkbox",
                     "title": "以往有因\"头晕\"就诊的经历吗？（以往就诊机构类型）",
                     "options": [
-                        "无就诊经历",
+                        { "label": "无就诊经历", "exclusive": true },
                         "乡村或社区医院",
                         "县区级医院",
                         "地市级医院",
                         "省级医院",
                         "其他"
                     ],
-                    "note": "勾选\"无就诊经历\"选项跳过下面4个问题",
                     "required": true
                 },
                 {
@@ -589,7 +614,11 @@
                         "急诊科",
                         "其他"
                     ],
-                    "required": false
+                    "required": false,
+                    "visibleIf": {
+                        "questionId": "special17",
+                        "anyOf": ["乡村或社区医院", "县区级医院", "地市级医院", "省级医院", "其他"]
+                    }
                 },
                 {
                     "id": "special19",
@@ -610,7 +639,11 @@
                         "其他",
                         "未做过任何检查"
                     ],
-                    "required": false
+                    "required": false,
+                    "visibleIf": {
+                        "questionId": "special17",
+                        "anyOf": ["乡村或社区医院", "县区级医院", "地市级医院", "省级医院", "其他"]
+                    }
                 },
                 {
                     "id": "special20",
@@ -634,7 +667,11 @@
                         "其他",
                         "未给出明确的病因诊断"
                     ],
-                    "required": false
+                    "required": false,
+                    "visibleIf": {
+                        "questionId": "special17",
+                        "anyOf": ["乡村或社区医院", "县区级医院", "地市级医院", "省级医院", "其他"]
+                    }
                 },
                 {
                     "id": "special21",
@@ -649,7 +686,11 @@
                         "5000-10000元",
                         "超过10000元"
                     ],
-                    "required": false
+                    "required": false,
+                    "visibleIf": {
+                        "questionId": "special17",
+                        "anyOf": ["乡村或社区医院", "县区级医院", "地市级医院", "省级医院", "其他"]
+                    }
                 }
             ]
         }

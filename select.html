@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>选择问卷</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>请选择问卷</h1>
+        <div id="questionnaireGrid" class="selector-grid"></div>
+        <div id="loadError" class="error-message">加载问卷列表失败，请刷新重试</div>
+    </div>
+    <script>
+    async function init() {
+        const grid = document.getElementById('questionnaireGrid');
+        const err = document.getElementById('loadError');
+        err.style.display = 'none';
+        try {
+            const resp = await fetch('/api/questionnaires');
+            if (!resp.ok) throw new Error('fetch list failed');
+            const list = await resp.json();
+            grid.innerHTML = '';
+            list.forEach(item => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'selector-card';
+                btn.innerHTML = `<div class="card-title">${item.title || '未命名问卷'}</div><div class="card-sub">${item.file}</div>`;
+                btn.addEventListener('click', () => {
+                    window.location.href = `index.html?file=${encodeURIComponent(item.file)}`;
+                });
+                grid.appendChild(btn);
+            });
+        } catch (e) {
+            console.error(e);
+            err.style.display = 'block';
+        }
+    }
+    init();
+    </script>
+</body>
+</html>
+
+
