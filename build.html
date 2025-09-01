@@ -12,9 +12,7 @@
         <div class="builder-toolbar">
             <input id="fileInput" type="text" placeholder="question_myform.json" style="flex:1; padding:0.5rem; border:1px solid #ddd; border-radius:4px;"/>
             <button id="addSectionBtn" class="mini-btn" type="button">新增部分</button>
-            <button id="importBtn" class="mini-btn" type="button">导入JSON</button>
-            <button id="templateBtn" class="mini-btn" type="button">插入模板</button>
-            <button id="exportBtn" class="mini-btn" type="button">预览JSON</button>
+            <button id="templateBtn" class="mini-btn" type="button">模版示例</button>
             <button id="saveBtn" class="mini-btn" type="button">保存</button>
         </div>
 
@@ -219,11 +217,7 @@
         render();
     });
 
-    document.getElementById('exportBtn').addEventListener('click', ()=>{
-        const preview = document.getElementById('jsonPreview');
-        preview.textContent = JSON.stringify({ title: state.title, sections: state.sections }, null, 2);
-        preview.style.display = 'block';
-    });
+    // 预览JSON功能已移除
 
     async function save(){
         const file = document.getElementById('fileInput').value.trim();
@@ -245,22 +239,9 @@
     }
     document.getElementById('saveBtn').addEventListener('click', save);
 
-    // 导入 JSON
-    document.getElementById('importBtn').addEventListener('click', async ()=>{
-        const text = prompt('粘贴要导入的 JSON：');
-        if (!text) return;
-        try{
-            const obj = JSON.parse(text);
-            if (!obj || !Array.isArray(obj.sections)) throw new Error('非问卷JSON');
-            state.title = obj.title || '新问卷';
-            state.sections = obj.sections || [];
-            render();
-        }catch(e){
-            alert('导入失败：' + (e.message||e));
-        }
-    });
+    // 导入JSON功能已移除
 
-    // 模板插入
+    // 模版示例插入
     document.getElementById('templateBtn').addEventListener('click', ()=>{
         const tpl = { title:'模板部分', questions:[
             { id:'q_text', type:'text', title:'示例文本（文本）', required:true },
