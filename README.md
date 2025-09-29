@@ -21,6 +21,22 @@
     - 制作页：`http://localhost:8000/build.html`
     - 同局域网访问会显示本机 IP 地址
 
+### 截图预览
+
+- 截图文件请放在项目根目录 `assets/` 中（文件名可替换）
+
+- 选择页（`select.html`）
+![选择页](assets/select.png)
+
+- 问卷填写页（`index.html`）
+![问卷填写页](assets/fill.png)
+
+- 结果与二维码
+![结果与二维码](assets/result.png)
+
+- 问卷制作页（`build.html`）
+![问卷制作页](assets/build.png)
+
 ### 问卷选择与加载
 
 - 打开 `select.html`，以卡片按钮的方式展示所有符合命名规则的问卷：
